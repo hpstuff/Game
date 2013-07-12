@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta name="viewport" content="user-scalable=0, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <script type="text/javascript" src="http://code.createjs.com/createjs-2013.05.14.min.js"></script>
+    <script type="text/javascript" src="game.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            -webkit-user-select: none;
+        }
+
+        body {
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .start canvas {
+            -webkit-animation: background_move 4s linear infinite;
+        }
+    </style>
+</head>
+<body >
+<canvas id="demoCanvas"></canvas>
+<script type="text/javascript">
+    var ticker = new Ticker();
+    var loader = new Loader();
+    var stage = new Stage();
+    var ship = new Ship();
+    var enemies = new Enemies(stage);
+    var background, touchstart, startShip;
+
+    function addRule(rule){
+        var lastSheet = document.styleSheets[document.styleSheets.length - 1];
+        lastSheet.insertRule(rule, lastSheet.cssRules.length);
+    }
+
+    ticker.addEventListener("tick", function(){
+        enemies.move();
+        ship.move(enemies);
+        ship.blinking();
+        ship.shooting(enemies);
+        ship.exploding();
+        stage.update();
+    });
+
+    stage.create("demoCanvas");
+    stage.setWidth(window.innerWidth);
+    stage.setHeight(window.innerHeight);
+    stage.retina();
+    stage.loader = loader;
+    stage.addChild(ship);
+
+    loader.addEventListener("complete", function(){
+        background = this.getResult("sBackground");
+        stage.canvas.style.backgroundImage = "url("+background.src+")";
+        stage.canvas.style.backgroundSize = (background.width * 0.5) +"px auto";
+
+        addRule("@-webkit-keyframes background_move { 100% { background-position: 0 "+(background.height * 0.5)+"px; } 0% { background-position: 0 0; } }");
+        document.body.classList.add("start");
+
+        ship.setImages(this.getResult("player"),
+                this.getResult("playerDamaged"),
+                this.getResult("playerExplosion"),
+                this.getResult("life"));
+        ship.setBulletImages(this.getResult("gLaser"), this.getResult("gLaserShot"));
+        ship.setShieldImage(this.getResult("shield"));
+        ship.opacity(50);
+        ship.addEventListener("remove", function(){
+            //alert("Game Over");
+            //window.location.reload();
+        });
+
+        ship.reset();
+
+        enemies.setImage(this.getResult("enemyShip"));
+        enemies.setExplosionImage(this.getResult("explosion"));
+
+        enemies.create();
+
+        ticker.start();
+    });
+
+    loader.loadImages([
+        {id: "sBackground", src: "images/Background/starBackground.png"},
+        {id: "player", src: "images/player.png"},
+        {id: "gLaser", src: "images/laserGreen.png"},
+        {id: "gLaserShot", src: "images/laserGreenShot.png"},
+        {id: "enemyShip", src: "images/enemyShip.png"},
+        {id: "shield", src: "images/shield.png"},
+        {id: "playerDamaged", src: "images/playerDamaged.png"},
+        {id: "life", src: "images/life.png"},
+        {id: "playerExplosion", src: "images/playerExplosion.png"},
+        {id: "explosion", src: "images/explosion.png"}
+    ]);
+
+    function gestureStart(e){
+        touchstart = {
+            x: e.pageX,
+            y: e.pageY
+        };
+        startShip = {
+            x: ship.x,
+            y: ship.y
+        };
+        e.preventDefault();
+    }
+    function gestureMove(e){
+        if(!touchstart) return;
+        var x = startShip.x - (touchstart.x - e.pageX) * 2,
+                y = startShip.y - (touchstart.y - e.pageY) * 2;
+        ship.moveTo(x, y);
+        e.preventDefault();
+    }
+    function gestureEnd(){
+        touchstart = void 0;
+        startShip = void 0;
+    }
+
+    //PC debug
+    window.addEventListener("mousedown", gestureStart);
+    window.addEventListener("mousemove", gestureMove);
+    window.addEventListener("mouseup", gestureEnd);
+
+    window.addEventListener("touchstart", gestureStart);
+    window.addEventListener("touchmove", gestureMove);
+    window.addEventListener("touchend", gestureEnd);
+</script>
+</body>
+</html>
